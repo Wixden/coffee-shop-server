@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -9,13 +10,10 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-console.log(process.env.DB_USER, process.env.DB_PASS);
-
 const dbUserName = process.env.DB_USER;
 const dbPassword = process.env.DB_PASS;
 
 // MongoDb
-const { MongoClient, ServerApiVersion } = require("mongodb");
 const uri = `mongodb+srv://${dbUserName}:${dbPassword}@cluster0.a0pfpbg.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -41,6 +39,21 @@ async function run() {
     const coffeeCollection = client.db("coffeeDB").collection("coffee");
 
     // All HTTP REQUEST Handlers Start
+    // GET METHOD
+    app.get("/coffee", async (req, res) => {
+      const coffee = coffeeCollection.find();
+      const result = await coffee.toArray();
+      res.send(result);
+    });
+
+    // GET ONE METHOD
+    app.get("/coffee/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coffeeCollection.findOne(query);
+      res.send(result);
+    });
+
     // POST METHOD
     app.post("/add-coffee", async (req, res) => {
       const newCoffee = req.body;
@@ -51,12 +64,35 @@ async function run() {
       res.send(result);
     });
 
-    // GET METHOD
-    app.get("/coffee", async (req, res) => {
-      const coffee = coffeeCollection.find();
-      const result = await coffee.toArray();
+    // UPDATE METHOD
+    app.put("/coffee/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedCoffee = req.body;
+      const coffee = {
+        $set: {
+          name: updatedCoffee.name,
+          quantity: updatedCoffee.quantity,
+          supplier: updatedCoffee.supplier,
+          taste: updatedCoffee.taste,
+          category: updatedCoffee.category,
+          photo: updatedCoffee.photo,
+          details: updatedCoffee.details,
+        },
+      };
+      const result = await coffeeCollection.updateOne(query, coffee, options);
       res.send(result);
     });
+
+    // DELETE METHOD
+    app.delete("/coffee/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coffeeCollection.deleteOne(query);
+      res.send(result);
+    });
+
     // All HTTP REQUEST HandlersEnd
 
     // Send a ping to confirm a successful connection
